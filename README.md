@@ -106,7 +106,7 @@ Ask the agent to generate the archetype bundle:
 Export this archetype as a valid .scene.json definition with metadata (id, name, category, tags, author, defaultDuration, defaultLyricPrimary, defaultLyricSecondary, previewGradient).
 ```
 
-Once generated, drag and drop the `.scene.json` file into Motion Studio Pro via **Community Hub -> Import Archetype** or copy the TypeScript class directly into `src/renderers/`.
+Once generated, drag and drop the `.scene.json` file into Motion Studio Pro via **Community Hub -> Import Archetype** or copy the TypeScript class directly into `src/styles/renderers/`.
 
 ---
 
