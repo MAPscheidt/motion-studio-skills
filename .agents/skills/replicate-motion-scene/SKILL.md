@@ -51,6 +51,7 @@ Key Architectural Tenets:
 - **Stateless Execution:** Renderers never store internal frame-to-frame mutable state. Every visual attribute is derived purely from `localT`, `dur`, `beatPulse`, `currentBeat`, `scene`, and `style`.
 - **Zero Canvas Leaks:** All canvas state mutations must be isolated inside `ctx.save()` / `ctx.restore()` blocks. Global alpha, blend modes, and stroke properties must always return to baseline.
 - **Audio Reactivity:** Geometric structures react to transient drum hits through `beatPulse` (exponential decay envelope) and `currentBeat` (continuous phase rotation).
+- **Faithful Aesthetic & Tone:** Do NOT force neon glow, bloom flares, or heavy shadow blur onto every scene. If the reference clip has clean, minimal typography, crisp white geometry, or solid color palettes, preserve that clean aesthetic faithfully. Do NOT allow external theme styles to override the scene's intended color palette unless requested.
 - **Zero Emojis:** Code, text, HUD overlays, and metadata must adhere strictly to clean typographical formatting without emojis.
 
 ---
