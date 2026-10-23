@@ -174,7 +174,7 @@ Community archetypes are stored in portable JSON format:
     "chromatic",
     "burst"
   ],
-  "author": "Matheus Scheidt",
+  "author": "Joe Doe",
   "defaultDuration": 1.82,
   "defaultLyricPrimary": "HYPERSPACE DRIVE",
   "defaultLyricSecondary": "SYSTEM NOMINAL",
@@ -225,4 +225,4 @@ motion-studio-skills/
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-Copyright (c) 2026 Matheus Scheidt.
+Copyright (c) 2026 Motion Studio Pro Contributors.
