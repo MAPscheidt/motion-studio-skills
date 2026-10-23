@@ -1,0 +1,22 @@
+{
+  "id": "cyber_glitch_vortex",
+  "name": "Cyber Glitch Vortex",
+  "category": "Tunnel & Warp",
+  "description": "High-velocity radial tunnel with chromatic dispersion lines, depth rings, and transient audio-reactive burst flashes.",
+  "tags": [
+    "warp",
+    "tunnel",
+    "cyber",
+    "reactive",
+    "chromatic",
+    "burst"
+  ],
+  "author": "Matheus Scheidt",
+  "defaultDuration": 1.82,
+  "defaultLyricPrimary": "HYPERSPACE DRIVE",
+  "defaultLyricSecondary": "SYSTEM NOMINAL",
+  "previewGradient": [
+    "#00f5ff",
+    "#ff007f"
+  ]
+}
