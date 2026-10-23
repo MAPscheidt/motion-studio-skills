@@ -804,9 +804,9 @@ To add an archetype to the built-in system:
 }
 ```
 
-### Community Scene Definition File (`.scene.json`)
+### Standalone Executable Scene Bundle (`.scene.json`)
 
-To share an archetype with the community or distribute via file upload, format it as a valid JSON file with extension `.scene.json`:
+To make the scene immediately uploadable into Motion Studio Pro without needing source code changes or developer compilation, package the entire Canvas 2D render code inside the `renderScript` property of a single `.scene.json` file:
 
 ```json
 {
@@ -816,18 +816,44 @@ To share an archetype with the community or distribute via file upload, format i
   "description": "High-velocity isometric crystal towers pulsing with audio transients.",
   "tags": ["isometric", "crystal", "neon", "audio-reactive"],
   "author": "Community Creator",
-  "defaultDuration": 1.82,
+  "defaultDuration": 2.0,
   "defaultLyricPrimary": "CRYSTAL PULSE",
   "defaultLyricSecondary": "ECHO DEPTH",
-  "previewGradient": ["#00f5ff", "#7c4dff"]
+  "previewGradient": ["#00f5ff", "#7c4dff"],
+  "renderScript": "function render(options) {\n  const { ctx, width: W, height: H, localT, dur, beatPulse, currentBeat, scene, style } = options;\n  // Full Canvas 2D rendering code\n}"
 }
 ```
 
-Users can drag and drop this `.scene.json` file directly into the **Scene & Archetype Hub Modal** in Motion Studio Pro to immediately preview and append the scene to their active timeline.
+Users can drag and drop this `.scene.json` file directly into the **Community Scenes Hub** in Motion Studio Pro to immediately preview and append the scene to their active timeline.
 
 ---
 
-## 7. Quality Checklist Before Completion
+## 7. Mandatory AI Agent Final Output Format (Creator Contract)
+
+Do NOT output verbose, multi-page theoretical analysis of keyframes. The creator needs an immediate, working file, simple upload instructions, and a quick guide on how to request improvements.
+
+Your response MUST follow this exact 3-part structure:
+
+### Part 1: Standalone `.scene.json` File
+Provide the complete, self-contained JSON object containing metadata and the executable `renderScript` in a clean code block (or write it to `[scene_id].scene.json`).
+
+### Part 2: How to Upload to Motion Studio Pro
+Provide a 4-step guide:
+1. Save the JSON code as `[scene_id].scene.json` (or copy the code block).
+2. Open Motion Studio Pro and click **COMMUNITY SCENES** in the top navigation bar.
+3. Drag and drop the `.scene.json` file into the upload dropzone (or click to browse).
+4. Click **"Add Scene to Sequence"** to add it to your timeline, or **"Apply to Selected Clip"** to swap your active scene.
+
+### Part 3: How to Tweak & Request Improvements
+List 3 to 4 concrete prompt ideas the creator can ask you to adjust:
+- **Colors & Atmosphere:** e.g., "Change the background to dark navy and make the arcs neon magenta."
+- **Timing & Speed:** e.g., "Make the word reveal sequence happen twice as fast."
+- **Camera & Perspective:** e.g., "Increase the camera zoom on the final focal word."
+- **Audio Reactivity:** e.g., "Make the stroke glow pulse harder on drum hits."
+
+---
+
+## 8. Quality Checklist Before Completion
 
 Before submitting or committing a newly reverse-engineered scene:
 
@@ -835,4 +861,5 @@ Before submitting or committing a newly reverse-engineered scene:
 2. **Deterministic Time:** Verify the renderer produces identical frames for identical `localT` without reliance on `Date.now()` or global counters.
 3. **Audio Reactivity:** Verify `beatPulse` meaningfully drives transient elements (stroke width, glow intensity, scale punch).
 4. **Context State Cleanliness:** Ensure `save()` and `restore()` calls are strictly balanced.
-5. **Test Suite Pass:** Run `npm test && npm run build` to confirm zero regressions and clean TypeScript compilation.
+5. **Executable Bundle:** Ensure `renderScript` is valid JavaScript enclosed in the `.scene.json` object.
+6. **Test Suite Pass:** Run `npm test && npm run build` to confirm zero regressions and clean TypeScript compilation.
