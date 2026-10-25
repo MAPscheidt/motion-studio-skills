@@ -1,13 +1,13 @@
 ---
 name: replicate-motion-scene
-description: Reverse-engineers video motion graphics into Canvas 2D scene archetypes for Motion Studio Pro
+description: Use when reverse-engineering, replicating, or translating video motion graphics, animations, or kinetic title sequences into performant Canvas 2D scene archetypes or Community .scene.json bundles for Motion Studio Pro
 ---
 
 # Replicate Motion Scene: Video to Canvas 2D Archetype Reverse-Engineering Guide
 
 This guide details the complete protocol for reverse-engineering video motion graphics, 3D animations, and kinetic title sequences into performant Canvas 2D scene archetypes for Motion Studio Pro.
 
-Follow this methodology to analyze video source footage, decompose choreography, extract geometric primitives and velocity curves, and implement standard `ArchetypeRenderer` modules.
+Follow this methodology to analyze video source footage, decompose choreography, extract geometric primitives and velocity curves, and implement standard `ArchetypeRenderer` modules or standalone Community `.scene.json` bundles.
 
 ---
 
@@ -49,25 +49,47 @@ Motion Studio Pro executes animations via a 60 FPS deterministic canvas renderin
 
 Key Architectural Tenets:
 - **Stateless Execution:** Renderers never store internal frame-to-frame mutable state. Every visual attribute is derived purely from `localT`, `dur`, `beatPulse`, `currentBeat`, `scene`, and `style`.
-- **Zero Canvas Leaks:** All canvas state mutations must be isolated inside `ctx.save()` / `ctx.restore()` blocks. Global alpha, blend modes, and stroke properties must always return to baseline.
+- **Zero Canvas Leaks:** All canvas state mutations must be isolated inside `ctx.save()` / `ctx.restore()` blocks. Global alpha, blend modes, shadows, and stroke properties must always return to baseline.
 - **Audio Reactivity:** Geometric structures react to transient drum hits through `beatPulse` (exponential decay envelope) and `currentBeat` (continuous phase rotation).
+- **Hero Typography Auto-Suppression:** If your scene archetype features prominent centered typography in Pass 1, flag it with `hasHeroTypography: true` (in registry) or `"suppressBottomLyrics": true` (in `.scene.json`). Motion Studio Pro's Auto-Safe engine will automatically suppress Pass 2 bottom subtitles to prevent duplicate text collisions.
+- **Vertical 9:16 Canvas:** The default studio resolution is 720x1280 (vertical mobile format). Adapt widescreen 16:9 motion elements by vertically stacking typography, framing focal geometry in the center core, and respecting bezel safe zones.
+- **Self-Contained Sandbox:** Community `.scene.json` scripts execute inside `new Function('options', script)`. They MUST declare all math, easing, and drawing helpers inline. NEVER use `import` statements or assume external helper files are in scope.
 - **Faithful Aesthetic & Tone:** Do NOT force neon glow, bloom flares, or heavy shadow blur onto every scene. If the reference clip has clean, minimal typography, crisp white geometry, or solid color palettes, preserve that clean aesthetic faithfully. Do NOT allow external theme styles to override the scene's intended color palette unless requested.
-- **Zero Emojis:** Code, text, HUD overlays, and metadata must adhere strictly to clean typographical formatting without emojis.
+- **Zero Emojis:** Code, text, HUD overlays, JSON bundles, and metadata must adhere strictly to clean typographical formatting without emojis.
 
 ---
 
 ## 2. Video and Frame Choreography Breakdown Guide
 
-When reversing a reference video clip, execute this four-phase analysis.
+When reversing a reference video clip, execute this structured analysis.
+
+### Phase 0: Video Source Ingestion & ffmpeg Deconstruction Protocol
+
+Before writing any code, examine the reference video footage frame-by-frame:
+
+1. **Inspect Video Metadata:**
+   ```bash
+   ffprobe -v error -show_entries stream=width,height,r_frame_rate,duration -of default=noprint_wrappers=1 input.mp4
+   ```
+2. **Extract Keyframe Sequence (10 FPS):**
+   Extract frames to a temporary directory to observe exact spatial trajectories, scale changes, and reveals:
+   ```bash
+   mkdir -p /tmp/ref_frames && ffmpeg -i input.mp4 -vf "fps=10,scale=360:-1" /tmp/ref_frames/frame_%03d.png
+   ```
+3. **Generate a Visual Contact Sheet:**
+   Produce a tiled contact sheet for instant visual comparison across time:
+   ```bash
+   ffmpeg -i input.mp4 -vf "fps=6,scale=180:-1,tile=6x4" /tmp/ref_contact_sheet.png
+   ```
 
 ### Phase A: Keyframe and Phase Extraction
 
-Split the target clip duration (typically 1.5 to 4.0 seconds) into distinct motion phases:
+Split the target clip duration into distinct motion phases relative to total duration `dur`:
 
-1. **In-Point (t = 0.00 to 0.25):** Entrance acceleration, camera push-in, scale burst, or opacity ramp.
-2. **Impact / Feature Point (t = 0.25 to 0.50):** Primary transient hit, geometry alignment, or lyric emphasis.
-3. **Settle / Orbit Hold (t = 0.50 to 0.85):** Secondary drift, continuous rotation, breathing cycle, or orbital spin.
-4. **Out-Point / Transition (t = 0.85 to 1.00):** Wipe, camera pullback, bloom flare dissolve, or velocity stretch.
+1. **In-Point (p = 0.00 to 0.25):** Entrance acceleration, camera push-in, scale burst, or opacity ramp.
+2. **Impact / Feature Point (p = 0.25 to 0.50):** Primary transient hit, geometry alignment, or lyric emphasis.
+3. **Settle / Orbit Hold (p = 0.50 to 0.85):** Secondary drift, continuous rotation, breathing cycle, or orbital spin.
+4. **Out-Point / Transition (p = 0.85 to 1.00):** Wipe, camera pullback, bloom flare dissolve, or velocity stretch.
 
 ### Phase B: Velocity Curves and Easing Formulas
 
@@ -164,7 +186,7 @@ Deconstruct the video into layered elements:
 3. **Foreground Focal Target:** Hero shape, glowing energy orb, kinetic typography, dynamic transient strike elements.
 4. **Atmospheric Overlay:** Bloom flashes, chromatic aberration fringes, vignette, and ambient particles.
 
-### Phase D: Kinetic Lyric Typography Placement
+### Phase D: Kinetic Lyric Typography & Auto-Safe Hero Suppression
 
 Kinetic text must balance legibility and dynamic choreography:
 - **Primary Lyric:** Prominent uppercase title (font weight 800 to 900, size 36px to 64px, tracked spacing).
@@ -173,6 +195,36 @@ Kinetic text must balance legibility and dynamic choreography:
   - Masked Slide-Up: Draw text inside a clipped bounding box with easeOutCubic offset.
   - Scale Punch: Scale from 1.25 down to 1.00 on the initial word timestamp.
   - Shadow Glow: Apply `ctx.shadowColor` and `ctx.shadowBlur` matching `style.theme.glowColor`.
+- **Auto-Safe Hero Suppression Flag:**
+  If your scene archetype renders prominent centered hero typography in Pass 1, you MUST mark:
+  - In `SceneArchetypeRegistry.ts`: `hasHeroTypography: true`
+  - In `.scene.json`: `"suppressBottomLyrics": true`
+  This informs Motion Studio Pro's Auto-Safe engine to mute the bottom subtitle stream during this scene, preventing double-text overlap.
+
+### Phase E: 9:16 Vertical Safe Zones & Layout Translation (16:9 to 9:16)
+
+Most motion graphics references are widescreen 16:9 (`1920x1080`), whereas Motion Studio Pro operates on a 9:16 vertical canvas (`720x1280` base):
+
+- **Vertical Stacking:** Translate horizontal layouts into vertical columns. Place the secondary lyric or scene eyebrow at `y = 0.18 * H`, the primary focal geometry at `cy = 0.44 * H`, and the primary hero lyric at `y = 0.68 * H` to `0.78 * H`.
+- **Center Optical Core:** Keep all high-velocity elements within the central core `cx = 0.5 * W ± 0.38 * W`.
+- **Lateral Safe Margins:** Ensure no text or critical geometry extends outside `[0.08 * W, 0.92 * W]` to avoid being clipped by stage bezels or mobile interface chrome.
+- **Isotropic Scaling:** Calculate sizes using `const S = Math.min(W, H)` so visual proportions remain identical regardless of export resolution (720x1280 vs 1080x1920).
+
+### Phase F: Relative Duration Normalization (Trimming Resilience)
+
+In Motion Studio Pro, users can trim clips to any duration (e.g. 0.8s to 12.0s).
+
+**CRITICAL RULE:** Never hardcode absolute time thresholds (e.g. `if (localT > 1.5)`). All keyframe calculations must be normalized against `dur`:
+
+```typescript
+// Always compute normalized safe progress
+const safeDur = Math.max(0.1, dur);
+const progress = clamp(localT / safeDur, 0, 1);
+
+// Animate phases relative to total duration
+const introProgress = windowEase(localT, 0, safeDur * 0.25, easeOutCubic);
+const outroProgress = windowEase(localT, safeDur * 0.80, safeDur, easeInOutCubic);
+```
 
 ---
 
@@ -793,13 +845,14 @@ To add an archetype to the built-in system:
 {
   id: 'my_custom_scene',
   name: '11. My Custom Scene',
-  category: '3D Isometric', // Or 'Kinetic Typography', 'Geometric Orbital', 'Architectural', 'Tunnel & Warp'
+  category: '3D Isometric', // 'Kinetic Typography' | 'Geometric Orbital' | '3D Isometric' | 'Architectural' | 'Tunnel & Warp'
   description: 'Detailed description of the motion graphics and camera choreography.',
   tags: ['isometric', 'neon', 'custom', 'geometry', 'reactive'],
   author: 'Your Name',
   defaultDuration: 1.83,
   defaultLyricPrimary: 'KINETIC TEXT',
   defaultLyricSecondary: 'SUBTITLE STREAM',
+  hasHeroTypography: true, // Set true if the scene renders centered/prominent text in Pass 1 to trigger Auto-Safe subtitle suppression
   previewGradient: ['#00f5ff', '#ff007f'],
   renderer: new MyCustomScene(),
 }
@@ -807,7 +860,20 @@ To add an archetype to the built-in system:
 
 ### Standalone Executable Scene Bundle (`.scene.json`)
 
-To make the scene immediately uploadable into Motion Studio Pro without needing source code changes or developer compilation, package the entire Canvas 2D render code inside the `renderScript` property of a single `.scene.json` file:
+To make the scene immediately uploadable into Motion Studio Pro without needing source code changes or developer compilation, package the entire Canvas 2D render code inside the `renderScript` property of a single `.scene.json` file.
+
+#### Strict Sandbox Rules for `renderScript`
+In `SceneHubModal.ts`, uploaded scripts are executed inside a lightweight runtime sandbox:
+```javascript
+const renderFn = new Function('options', sceneDef.renderScript);
+```
+
+1. **NO ES Module Imports:** Never write `import ...` or `export ...`. Doing so causes an immediate `SyntaxError: Cannot use import statement outside a module` in the browser.
+2. **All Helpers Must Be Inlined:** Utility functions like `clamp`, `lerp`, `easeOutCubic`, and projection algorithms must be declared inside the function body.
+3. **Double Typography Suppression:** If the scene contains prominent centered text, set `"suppressBottomLyrics": true` at the root of the JSON bundle.
+4. **Valid JSON Serialization:** Use `JSON.stringify()` when generating programmatic JSON to ensure quotes and newlines (`\n`) are cleanly escaped.
+
+#### Complete `.scene.json` Specification & Reference Template
 
 ```json
 {
@@ -820,8 +886,9 @@ To make the scene immediately uploadable into Motion Studio Pro without needing 
   "defaultDuration": 2.0,
   "defaultLyricPrimary": "CRYSTAL PULSE",
   "defaultLyricSecondary": "ECHO DEPTH",
+  "suppressBottomLyrics": true,
   "previewGradient": ["#00f5ff", "#7c4dff"],
-  "renderScript": "function render(options) {\n  const { ctx, width: W, height: H, localT, dur, beatPulse, currentBeat, scene, style } = options;\n  // Full Canvas 2D rendering code\n}"
+  "renderScript": "const { ctx, width: W, height: H, localT, dur, beatPulse, currentBeat, scene, style } = options;\n\n// 1. Inline Math & Easing Utilities\nconst clamp = (v, min, max) => Math.min(Math.max(v, min), max);\nconst lerp = (a, b, t) => a + (b - a) * clamp(t, 0, 1);\nconst easeOutCubic = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);\nconst easeInOutCubic = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;\n\nconst safeDur = Math.max(0.1, dur);\nconst progress = clamp(localT / safeDur, 0, 1);\nconst cx = W * 0.5;\nconst cy = H * 0.44;\n\nctx.save();\n\n// 2. Background\nctx.fillStyle = '#0a0a14';\nctx.fillRect(0, 0, W, H);\n\n// 3. Audio-Reactive Core Geometry\nconst radius = (Math.min(W, H) * 0.22) + beatPulse * 24;\nctx.save();\nctx.translate(cx, cy);\nctx.rotate(currentBeat * 0.4 + progress * Math.PI);\nctx.strokeStyle = '#00f5ff';\nctx.lineWidth = 4 + beatPulse * 3;\nctx.shadowColor = '#00f5ff';\nctx.shadowBlur = 20;\nctx.beginPath();\nctx.arc(0, 0, radius, 0, Math.PI * 2);\nctx.stroke();\nctx.restore();\n\n// 4. Hero Kinetic Typography\nif (scene && scene.lyricPrimary) {\n  ctx.save();\n  const textAlpha = clamp(easeOutCubic(progress * 3), 0, 1);\n  ctx.globalAlpha = textAlpha;\n  ctx.font = '800 ' + Math.round(W * 0.065) + 'px sans-serif';\n  ctx.textAlign = 'center';\n  ctx.textBaseline = 'middle';\n  ctx.fillStyle = '#ffffff';\n  ctx.shadowColor = '#7c4dff';\n  ctx.shadowBlur = 15;\n  ctx.fillText(scene.lyricPrimary.toUpperCase(), cx, H * 0.74);\n  ctx.restore();\n}\n\nctx.restore();"
 }
 ```
 
@@ -836,7 +903,7 @@ Do NOT output verbose, multi-page theoretical analysis of keyframes. The creator
 Your response MUST follow this exact 3-part structure:
 
 ### Part 1: Standalone `.scene.json` File
-Provide the complete, self-contained JSON object containing metadata and the executable `renderScript` in a clean code block (or write it to `[scene_id].scene.json`).
+Provide the complete, self-contained JSON object containing metadata, the `suppressBottomLyrics` flag, and the self-contained executable `renderScript` in a clean code block (or write it to `[scene_id].scene.json`).
 
 ### Part 2: How to Upload to Motion Studio Pro
 Provide a 4-step guide:
@@ -860,7 +927,10 @@ Before submitting or committing a newly reverse-engineered scene:
 
 1. **Zero Emojis:** Verify the document, code comments, and UI strings contain zero emojis.
 2. **Deterministic Time:** Verify the renderer produces identical frames for identical `localT` without reliance on `Date.now()` or global counters.
-3. **Audio Reactivity:** Verify `beatPulse` meaningfully drives transient elements (stroke width, glow intensity, scale punch).
-4. **Context State Cleanliness:** Ensure `save()` and `restore()` calls are strictly balanced.
-5. **Executable Bundle:** Ensure `renderScript` is valid JavaScript enclosed in the `.scene.json` object.
-6. **Test Suite Pass:** Run `npm test && npm run build` to confirm zero regressions and clean TypeScript compilation.
+3. **Relative Duration:** Verify all animation keyframes derive from `progress = localT / dur` or `windowEase()`, with no hardcoded second cutoffs.
+4. **Hero Typography Flag:** Verify `hasHeroTypography: true` (in registry) or `"suppressBottomLyrics": true` (in `.scene.json`) is set if the scene renders prominent centered text.
+5. **Self-Contained Sandbox:** Verify `renderScript` contains NO `import` statements and declares all math/easing helpers inline.
+6. **9:16 Mobile Framing:** Verify coordinates scale proportionally with `W` and `H` and stay within safe lateral margins (`[0.08 * W, 0.92 * W]`).
+7. **Audio Reactivity:** Verify `beatPulse` and `currentBeat` meaningfully drive transient elements (stroke width, scale punch, rotation phase).
+8. **Context State Cleanliness:** Ensure `ctx.save()` and `ctx.restore()` calls are strictly balanced.
+9. **Test Suite Pass:** Run `npm test && npm run build` to confirm zero regressions and clean TypeScript compilation.
