@@ -235,8 +235,12 @@ motion-studio-skills/
 |-- scripts/
 |   \-- analyze_ref.py               # Repository CLI helper
 |-- examples/
-|   |-- sample-scene.scene.json      # Valid sample archetype definition
-|   \-- temporal_arc_cascade.scene.json
+|   |-- sample-scene.scene.json          # Valid sample archetype definition
+|   |-- temporal_arc_cascade.scene.json
+|   |-- kinetic_grunge_stack.scene.json  # 2.7s kinetic beat-synced stack
+|   |-- kinetic_strip_down.scene.json    # 3.9s reverse strip-down flash
+|   |-- metallic_spotlight_reveal.scene.json # 4.5s metallic spotlight reveal
+|   \-- kinetic_teaser_sequence.bundle.json  # Complete 3-shot sequence pack bundle
 |-- .gitignore
 |-- LICENSE                          # MIT License
 \-- README.md

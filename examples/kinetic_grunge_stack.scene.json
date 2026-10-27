@@ -1,0 +1,22 @@
+{
+  "id": "kinetic_grunge_stack",
+  "name": "Kinetic Grunge Stack",
+  "category": "Kinetic Typography",
+  "description": "Punchy, beat-synced typographic stack that snaps words in on the beat with distressed grunge stamping and scale impacts.",
+  "tags": [
+    "kinetic",
+    "grunge",
+    "stack",
+    "audio-reactive"
+  ],
+  "author": "Motion Studio Pro",
+  "defaultDuration": 2.7,
+  "defaultLyricPrimary": "ARE",
+  "defaultLyricSecondary": "YOU READY?",
+  "suppressBottomLyrics": true,
+  "previewGradient": [
+    "#000000",
+    "#e9135a"
+  ],
+  "renderScript": "function render(options) {\n  const { ctx, width: W, height: H, localT, dur, beatPulse, currentBeat, scene } = options;\n\n  const clamp = (v, min, max) => Math.min(Math.max(v, min), max);\n  const easeOutCubic = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);\n  const windowEase = (time, t0, t1, easing = easeOutCubic) => {\n    if (t1 <= t0) return time >= t1 ? 1 : 0;\n    return easing(clamp((time - t0) / (t1 - t0), 0, 1));\n  };\n\n  const safeDur = Math.max(0.1, dur);\n  const p = clamp(localT / safeDur, 0, 1);\n  const t = p * 2.7;\n  const pulse = Number.isFinite(beatPulse) ? clamp(beatPulse, 0, 1) : 0;\n\n  const cx = W * 0.5;\n  const cy = H * 0.5;\n  const lineSpacing = Math.round(H * 0.075);\n\n  const primaryColor = '#FFFFFF';\n  const accentColor = '#E9135A';\n\n  let line1 = 'ARE';\n  let line2 = 'YOU';\n  let line3 = 'READY?';\n\n  if (scene && scene.lyricPrimary) {\n    const pWords = scene.lyricPrimary.trim().split(/\\s+/).filter(Boolean);\n    if (pWords.length >= 3) {\n      line1 = pWords[0];\n      line2 = pWords[1];\n      line3 = pWords.slice(2).join(' ');\n    } else if (pWords.length === 1) {\n      line1 = pWords[0];\n    } else if (pWords.length === 2) {\n      line1 = pWords[0];\n      line2 = pWords[1];\n    }\n  }\n\n  if (scene && scene.lyricSecondary) {\n    const sWords = scene.lyricSecondary.trim().split(/\\s+/).filter(Boolean);\n    if (sWords.length === 1) {\n      line3 = sWords[0];\n    } else if (sWords.length >= 2) {\n      line2 = sWords[0];\n      line3 = sWords.slice(1).join(' ');\n    }\n  }\n\n  ctx.save();\n  ctx.fillStyle = '#000000';\n  ctx.fillRect(0, 0, W, H);\n\n  function drawText(text, x, y, color, scaleBounce) {\n    ctx.save();\n    ctx.translate(x, y);\n    if (scaleBounce && scaleBounce !== 1.0) {\n      ctx.scale(scaleBounce, scaleBounce);\n    }\n    const fontSize = Math.round(W * 0.12);\n    ctx.font = '900 ' + fontSize + 'px Impact, Arial Black, sans-serif';\n    ctx.textAlign = 'center';\n    ctx.textBaseline = 'middle';\n    ctx.fillStyle = color;\n    ctx.fillText(text, 0, 0);\n\n    ctx.fillStyle = '#000000';\n    const textW = (ctx.measureText && ctx.measureText(text).width) || fontSize * text.length * 0.6;\n    let seed = 1337 + text.length * 17;\n    const rand = () => {\n      seed = (seed * 1664525 + 1013904223) % 4294967296;\n      return seed / 4294967296;\n    };\n    const flecks = Math.round(text.length * 7);\n    for (let i = 0; i < flecks; i++) {\n      const fx = -textW * 0.45 + rand() * textW * 0.9;\n      const fy = -fontSize * 0.4 + rand() * fontSize * 0.8;\n      ctx.fillRect(fx, fy, 2 + rand() * 3, 1.5 + rand() * 2);\n    }\n    ctx.restore();\n  }\n\n  if (t < 0.8) {\n    const bounce = 1.0 + windowEase(t, 0.0, 0.25, easeOutCubic) * 0.12 * (1 - t / 0.8) + pulse * 0.05;\n    drawText(line1, cx, cy, primaryColor, bounce);\n  } else {\n    const bounce = 1.0 + windowEase(t, 0.8, 1.05, easeOutCubic) * 0.08 * (1 - (t - 0.8) / 1.9) + pulse * 0.04;\n    drawText(line1, cx, cy - lineSpacing, primaryColor, bounce);\n    drawText(line2, cx, cy, accentColor, bounce);\n    drawText(line3, cx, cy + lineSpacing, primaryColor, bounce);\n  }\n\n  ctx.restore();\n}"
+}

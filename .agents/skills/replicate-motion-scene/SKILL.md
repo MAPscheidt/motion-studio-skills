@@ -1100,6 +1100,33 @@ const renderFn = new Function('options', sceneDef.renderScript);
 2. **All Helpers Must Be Inlined:** Utility functions like `clamp`, `lerp`, `easeOutCubic`, and projection algorithms must be declared inside the function body.
 3. **Double Typography Suppression:** If the scene contains prominent centered text, set `"suppressBottomLyrics": true` at the root of the JSON bundle.
 4. **Valid JSON Serialization:** Use `JSON.stringify()` when generating programmatic JSON to ensure quotes and newlines (`\n`) are cleanly escaped.
+5. **Dynamic Lyric Binding (Never Hardcode Text):** Never hardcode literal text strings inside `renderScript`. Always bind text to `scene.lyricPrimary` and `scene.lyricSecondary`.
+   - For single-phrase scenes: bind directly with fallback `(scene && scene.lyricPrimary) ? scene.lyricPrimary : 'DEFAULT'`.
+   - For multi-phrase sequences (teasers / commercials): use slash-delimited (`/`) or whitespace parsing so the creator can edit every line from the Inspector Panel:
+   ```javascript
+   const parsePhrases = (str, fallback) => {
+     if (!str || typeof str !== 'string' || str.trim().length === 0) return fallback;
+     if (str.includes('/')) return str.split('/').map(s => s.trim()).filter(Boolean);
+     const words = str.split(/\s+/).filter(Boolean);
+     return words.length > 0 ? words : fallback;
+   };
+   const p = parsePhrases(scene && scene.lyricPrimary, ['LINE_1', 'LINE_2']);
+   const s = parsePhrases(scene && scene.lyricSecondary, ['LINE_3', 'LINE_4']);
+   ```
+6. **Multi-Shot Videos & Visual Scene Cuts (Mandatory Modular Standard):**
+   When analyzing reference video footage, the AI must detect and break clips at every **visual scene change**, not just text changes.
+   
+   #### Visual Scene Change Triggers for New Scene Archetypes:
+   * **Visual Hard Cut / Blackout Pause:** Any hard cut, strobe transition, or blackout frame (e.g. the 00:07 pause before the drop) signals a new shot boundary.
+   * **Background & Lighting Shift:** When the environment changes (e.g. pure black void -> sweeping metallic spotlight beam -> neon grid).
+   * **Geometry & Camera Transformation:** When the visual primitives shift (e.g. centered 2D kinetic text stack -> 3D isometric wireframe cube -> tunnel warp).
+   * **Motion Archetype & Energy Change:** When pacing shifts from rapid stuttering typography to a smooth slow-motion camera orbit.
+
+   #### Decomposition Contract:
+   * **DEFAULT & MANDATORY:** ALWAYS decompose each distinct visual shot into its own standalone `.scene.json` archetype (e.g. `shot_1_stack.scene.json`, `shot_2_strip.scene.json`, `shot_3_spotlight.scene.json`).
+   * **Sequence Bundle Packaging:** Combine the individual shots into a single `.bundle.json` sequence pack (`{ "bundleId": "...", "name": "...", "scenes": [shot1, shot2, shot3] }`).
+   * **Timeline Fit:** Each shot gets its own natural duration matching the cut point in the reference video, and its own clean `lyricPrimary` / `lyricSecondary` parameters in Motion Studio Pro.
+   * **Monolithic Exception:** Never package multi-shot videos into a single monolithic scene unless explicitly requested by the creator. If forced into a single file, you MUST implement dynamic slash-delimiter parsing (`/`).
 
 #### Complete `.scene.json` Specification & Reference Template
 
@@ -1121,6 +1148,27 @@ const renderFn = new Function('options', sceneDef.renderScript);
 ```
 
 Users can drag and drop this `.scene.json` file directly into the **Community Scenes Hub** in Motion Studio Pro to immediately preview and append the scene to their active timeline.
+
+#### Multi-Scene Sequence Bundle (`.bundle.json`)
+
+To distribute multiple modular scenes in a single file that imports with a single drag-and-drop:
+
+```json
+{
+  "bundleId": "my_sequence_pack",
+  "name": "My Sequence Pack",
+  "category": "Kinetic Typography",
+  "description": "Multi-shot sequence pack.",
+  "scenes": [
+    { /* scene 1 definition */ },
+    { /* scene 2 definition */ },
+    { /* scene 3 definition */ }
+  ]
+}
+```
+
+Or simply package them as a JSON array of scene definitions `[ scene1, scene2, scene3 ]`.
+Motion Studio Pro's Community Scenes Hub supports `.bundle.json` files as well as multi-file drag-and-drop (selecting or dropping multiple `.scene.json` files simultaneously).
 
 ---
 
