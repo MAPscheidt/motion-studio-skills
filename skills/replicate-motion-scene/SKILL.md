@@ -63,24 +63,20 @@ Key Architectural Tenets:
 
 When reversing a reference video clip, execute this structured analysis.
 
-### Phase 0: Video Source Ingestion & ffmpeg Deconstruction Protocol
+### Phase 0: Automated Video Deconstruction Protocol (`scripts/analyze_ref.py`)
 
-Before writing any code, examine the reference video footage frame-by-frame:
+Do not guess timing or eye-ball velocities from a moving video. Run the bundled deconstruction script:
 
-1. **Inspect Video Metadata:**
-   ```bash
-   ffprobe -v error -show_entries stream=width,height,r_frame_rate,duration -of default=noprint_wrappers=1 input.mp4
-   ```
-2. **Extract Keyframe Sequence (10 FPS):**
-   Extract frames to a temporary directory to observe exact spatial trajectories, scale changes, and reveals:
-   ```bash
-   mkdir -p /tmp/ref_frames && ffmpeg -i input.mp4 -vf "fps=10,scale=360:-1" /tmp/ref_frames/frame_%03d.png
-   ```
-3. **Generate a Visual Contact Sheet:**
-   Produce a tiled contact sheet for instant visual comparison across time:
-   ```bash
-   ffmpeg -i input.mp4 -vf "fps=6,scale=180:-1,tile=6x4" /tmp/ref_contact_sheet.png
-   ```
+```bash
+python3 scripts/analyze_ref.py input.mp4 --dur 15 --fps 4 --hook 3 --out cache/ref_analysis
+```
+
+The tool produces a structured inspection folder with zero external dependencies:
+1. **`sheet_00.jpg`, `sheet_01.jpg` (Timestamped Contact Sheets):** 24 frames per sheet sampled at 4 FPS with **exact second timestamps labeled under every frame** (e.g. `0.250s`, `0.500s`, `0.750s`).
+2. **`strip_hook.jpg` (Consecutive Hook Frames):** Every single frame of the first 3 seconds laid out in sequence. **The hook is where top motion designers hide their core techniques:** how each word enters, smear frames, overshoot, particles, and transitions. Study it frame-by-frame.
+3. **`cuts.txt` (Scene Cut Timestamps):** Automatic cut-point detection using FFmpeg scene detection (`select='gt(scene,0.3)'`).
+4. **`spectrogram.png` & `audio.wav`:** Audio frequency spectrogram revealing exact bass and transient spikes to synchronize with `beatPulse`.
+5. **`analysis.json` & `info.txt`:** Full format metadata (resolution, source FPS, average scene duration, recommended pacing).
 
 ### Phase A: Keyframe and Phase Extraction
 
@@ -225,6 +221,28 @@ const progress = clamp(localT / safeDur, 0, 1);
 const introProgress = windowEase(localT, 0, safeDur * 0.25, easeOutCubic);
 const outroProgress = windowEase(localT, safeDur * 0.80, safeDur, easeInOutCubic);
 ```
+
+### Phase G: Motion Intensity Calibration (Scale 1–5)
+
+Match the aesthetic and motion intensity of the source reference. Do not force hyper-active effects onto a restrained piece:
+
+| Tier | Pacing & Style | Visual Characteristics | Canvas 2D Elements to Use |
+|---|---|---|---|
+| **Tier 1: Restrained** | Corporate, Luxury, Editorial | Generous whitespace, slow push-ins, lower thirds, 1 font family, zero flashes | Crisp geometry, smooth cubic easing, subtle line strokes, no blur or bloom |
+| **Tier 2: Clarity-First** | SaaS, Tech Explainer | Focus zooms, clean card elevations, crisp typography, cursor highlights | 2.5D card tilts, smooth bezier tracking, soft drop shadows (`shadowBlur: 10`) |
+| **Tier 3: Dynamic** | Commercial, Promo | Paced reveals, orbital rings, step counters, beat-synced pulses | Concentric arcs, radial gradients, beat-scale punches (1.05x), subtle glow |
+| **Tier 4: High Energy** | Social UGC, Brand Anthem | Kinetic punch zooms, kinetic word pops, directional smears | Chromatic split passes (2–4px), masked slide-ups, expanding shockwaves |
+| **Tier 5: Hyper Frenetic** | UKG, Bass Music, Stutter Reel | Rapid cuts (<1.2s), strobe flashes, glitch offsets, high bloom | Full bloom flares (`lighter`), RGB stutter, matrix rune decode, audio shockwaves |
+
+**The Golden Rule:** The more clarity and trust the message requires, the less decorative motion is applied. Every effect must serve attention, emphasis, or transition.
+
+### Phase H: Color Hierarchy (60-30-10) & Eye-Trace Continuity
+
+- **60-30-10 Composition:**
+  - **60% Dominant Canvas:** Dark background, deep radial falloff, or clean solid color.
+  - **30% Structural Scaffolding:** Geometric wireframes, isometric cubes, orbital rings, or card panels.
+  - **10% High-Energy Accent:** Reserved strictly for hero words, audio pulse spikes, or the central glowing focal point.
+- **Eye-Trace Continuity:** When transitioning between keyframe phases or cuts, keep the next focal point near where the previous one settled. Do not force the viewer's gaze to jump from bottom-left to top-right across a rapid cut. Lead with motion, then settle on text.
 
 ---
 
@@ -470,7 +488,217 @@ export function drawWithChromaticAberration(
 
 ---
 
-## 4. ArchetypeRenderer Interface Compliance
+## 4. Motion Graphics Recipe Catalog (Canvas 2D Patterns)
+
+Battle-tested procedural motion patterns adapted from top motion design sequences:
+
+### Recipe 1: 2.5D Perspective Pop & Extruded Depth
+
+Simulates a tilted 3D card or UI panel with extruded side faces and dynamic light rim in pure Canvas 2D without WebGL overhead:
+
+```typescript
+export function draw25DCard(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+  tiltXRad: number,
+  tiltYRad: number,
+  depthPx: number,
+  faceColor: string,
+  edgeColor: string,
+  strokeColor: string
+): void {
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // Compute 2.5D sheared corner offsets
+  const cosY = Math.cos(tiltYRad);
+  const sinX = Math.sin(tiltXRad);
+  const hw = (w * 0.5) * cosY;
+  const hh = (h * 0.5);
+  const shearY = (w * 0.5) * Math.sin(tiltYRad) * 0.5;
+  const shearX = (h * 0.5) * sinX * 0.5;
+
+  // Front face vertices
+  const p0 = { x: -hw + shearX, y: -hh - shearY };
+  const p1 = { x:  hw + shearX, y: -hh + shearY };
+  const p2 = { x:  hw - shearX, y:  hh + shearY };
+  const p3 = { x: -hw - shearX, y:  hh - shearY };
+
+  // 1. Extruded Depth Shadow / Side Faces
+  if (depthPx > 0.5) {
+    ctx.fillStyle = edgeColor;
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p1.x + depthPx, p1.y + depthPx * 0.6);
+    ctx.lineTo(p2.x + depthPx, p2.y + depthPx * 0.6);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(p2.x, p2.y);
+    ctx.lineTo(p2.x + depthPx, p2.y + depthPx * 0.6);
+    ctx.lineTo(p3.x + depthPx, p3.y + depthPx * 0.6);
+    ctx.lineTo(p3.x, p3.y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 2. Front Face
+  ctx.fillStyle = faceColor;
+  ctx.beginPath();
+  ctx.moveTo(p0.x, p0.y);
+  ctx.lineTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.lineTo(p3.x, p3.y);
+  ctx.closePath();
+  ctx.fill();
+
+  // 3. Highlight Stroke Rim
+  if (strokeColor) {
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+```
+
+### Recipe 2: Kinetic Tracking Collapse & Slam
+
+Spreads letter spacing wide during entrance acceleration, then rapidly collapses tracking into a punchy, tight lockup on drum transient impact:
+
+```typescript
+export function renderTrackingCollapse(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  cx: number,
+  cy: number,
+  progress: number, // 0.0 to 1.0
+  fontSizePx: number,
+  fontFamily: string,
+  color: string,
+  accentColor: string,
+  beatPulse = 0
+): void {
+  ctx.save();
+
+  // Phase 1: Rapid tracking collapse (0.0 to 0.4 progress)
+  const collapseT = clamp(progress / 0.4, 0, 1);
+  const trackingPx = lerp(fontSizePx * 0.45, 0, easeOutCubic(collapseT));
+
+  // Phase 2: Transient punch scale on impact
+  const scalePunch = 1.0 + (1 - collapseT) * 0.25 + beatPulse * 0.08;
+
+  ctx.translate(cx, cy);
+  ctx.scale(scalePunch, scalePunch);
+  ctx.font = `800 ${fontSizePx}px "${fontFamily}", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Fallback for browsers supporting experimental canvas letterSpacing
+  try {
+    (ctx as any).letterSpacing = `${trackingPx.toFixed(1)}px`;
+    ctx.fillStyle = color;
+    ctx.fillText(text.toUpperCase(), 0, 0);
+    (ctx as any).letterSpacing = '0px';
+  } catch {
+    // Manual character advance fallback
+    const chars = text.toUpperCase().split('');
+    const charWidths = chars.map((c) => ctx.measureText(c).width);
+    const totalW = charWidths.reduce((a, b) => a + b, 0) + (chars.length - 1) * trackingPx;
+    let curX = -totalW * 0.5;
+
+    ctx.fillStyle = color;
+    for (let i = 0; i < chars.length; i++) {
+      ctx.fillText(chars[i], curX + charWidths[i] * 0.5, 0);
+      curX += charWidths[i] + trackingPx;
+    }
+  }
+
+  ctx.restore();
+}
+```
+
+### Recipe 3: Directional Motion Echo (Colored Motion Blur)
+
+Simulates high-velocity directional motion blur in Canvas 2D without shader overhead by drawing offset ghost copies with decaying alpha:
+
+```typescript
+export function drawMotionEcho(
+  ctx: CanvasRenderingContext2D,
+  copies: number,
+  dx: number,
+  dy: number,
+  accentColor: string,
+  drawTarget: (ctx: CanvasRenderingContext2D, alpha: number) => void
+): void {
+  ctx.save();
+  for (let i = copies; i >= 1; i--) {
+    const fraction = i / (copies + 1);
+    const alpha = (1 - fraction) * 0.4;
+    ctx.save();
+    ctx.translate(dx * fraction, dy * fraction);
+    drawTarget(ctx, alpha);
+    ctx.restore();
+  }
+  // Draw sharp hero pass
+  drawTarget(ctx, 1.0);
+  ctx.restore();
+}
+```
+
+### Recipe 4: Audio-Reactive Concentric Arc Cascade
+
+Generates high-energy concentric orbital rings that pulse and counter-rotate with musical beats:
+
+```typescript
+export function drawArcCascade(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  baseRadius: number,
+  rings: number,
+  currentBeat: number,
+  beatPulse: number,
+  strokeColor: string,
+  glowColor: string
+): void {
+  ctx.save();
+  for (let r = 0; r < rings; r++) {
+    const radius = baseRadius + r * 28 + beatPulse * 16 * (r + 1);
+    const dir = r % 2 === 0 ? 1 : -1;
+    const startAngle = (currentBeat * 0.5 * dir) + (r * Math.PI * 0.25);
+    const arcLength = Math.PI * (0.8 + beatPulse * 0.4);
+
+    ctx.save();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2.5 + (r === 0 ? beatPulse * 2 : 0);
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 12 * (beatPulse + 0.2);
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, startAngle, startAngle + arcLength);
+    ctx.stroke();
+
+    // Secondary counter-arc
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, startAngle + Math.PI, startAngle + Math.PI + (arcLength * 0.6));
+    ctx.stroke();
+
+    ctx.restore();
+  }
+  ctx.restore();
+}
+```
+
+---
+
+## 5. ArchetypeRenderer Interface Compliance
 
 All scene renderers in Motion Studio Pro must conform to `ArchetypeRenderer` defined in `src/styles/renderers/types.ts`.
 
@@ -619,7 +847,7 @@ export class MyCustomScene implements ArchetypeRenderer {
 
 ---
 
-## 5. TDD Unit Testing Requirements
+## 6. TDD Unit Testing Requirements
 
 Every archetype renderer must be thoroughly verified with Vitest prior to registration. Tests must guarantee zero throws across the entire timeline window and protect against numerical instability.
 
@@ -831,7 +1059,7 @@ describe('MyCustomScene Archetype Renderer', () => {
 
 ---
 
-## 6. Studio Registration and Community Hub Integration
+## 7. Studio Registration and Community Hub Integration
 
 ### In-Code Registration (`SceneArchetypeRegistry.ts`)
 
@@ -896,7 +1124,7 @@ Users can drag and drop this `.scene.json` file directly into the **Community Sc
 
 ---
 
-## 7. Mandatory AI Agent Final Output Format (Creator Contract)
+## 8. Mandatory AI Agent Final Output Format (Creator Contract)
 
 Do NOT output verbose, multi-page theoretical analysis of keyframes. The creator needs an immediate, working file, simple upload instructions, and a quick guide on how to request improvements.
 
@@ -921,7 +1149,7 @@ List 3 to 4 concrete prompt ideas the creator can ask you to adjust:
 
 ---
 
-## 8. Quality Checklist Before Completion
+## 9. Quality Checklist Before Completion
 
 Before submitting or committing a newly reverse-engineered scene:
 

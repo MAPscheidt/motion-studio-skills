@@ -87,6 +87,21 @@ Reference: [Attach video / provide link / paste breakdown]
 - Beat transient: Bass pulse triggers radial ring expansion and chromatic flare.
 ```
 
+#### Automated Video Deconstruction Helper (`scripts/analyze_ref.py`)
+
+If you have a local `.mp4` or `.mov` reference file, run the bundled inspection helper:
+
+```bash
+python3 scripts/analyze_ref.py reference.mp4 --dur 15 --fps 4 --hook 3
+```
+
+This generates:
+- `sheet_00.jpg`: Timestamped contact sheets with exact second markers on every frame.
+- `strip_hook.jpg`: Every frame of the first 3 seconds (the hook) in sequence.
+- `cuts.txt`: Automated cut detection timestamps.
+- `spectrogram.png` & `audio.wav`: Audio transient frequency map.
+- `analysis.json`: Source resolution, FPS, average scene duration, and pacing recommendations.
+
 ### Step 2: Request Easing & Geometry Synthesis
 
 Ask the agent to synthesize the choreography using the `replicate-motion-scene` skill:
@@ -209,12 +224,19 @@ motion-studio-skills/
 |-- .agents/
 |   \-- skills/
 |       \-- replicate-motion-scene/
-|           \-- SKILL.md             # Antigravity project skill format
+|           |-- SKILL.md             # Antigravity project skill format
+|           \-- scripts/
+|               \-- analyze_ref.py   # Automated reference deconstruction helper
 |-- skills/
 |   \-- replicate-motion-scene/
-|       \-- SKILL.md                 # Universal skill format (Claude, Antigravity)
+|       |-- SKILL.md                 # Universal skill format (Claude, Antigravity)
+|       \-- scripts/
+|           \-- analyze_ref.py       # Standalone skill script
+|-- scripts/
+|   \-- analyze_ref.py               # Repository CLI helper
 |-- examples/
-|   \-- sample-scene.scene.json      # Valid sample archetype definition
+|   |-- sample-scene.scene.json      # Valid sample archetype definition
+|   \-- temporal_arc_cascade.scene.json
 |-- .gitignore
 |-- LICENSE                          # MIT License
 \-- README.md
